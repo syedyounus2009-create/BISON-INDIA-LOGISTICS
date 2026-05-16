@@ -1,0 +1,10 @@
+flask
+flask_sqlalchemy
+flask_cors
+psycopg2-binary
+python-dotenv
+pyjwt
+werkzeug
+requests
+razorpay
+gunicorn
