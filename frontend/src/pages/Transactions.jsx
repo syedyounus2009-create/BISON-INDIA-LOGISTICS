@@ -1,44 +1,54 @@
-import { useQuery } from '@tanstack/react-query';
-import { bisonAPI } from '@/api/bisonClient';
+// ============================================================================
+// SYSTEM IDENTIFIER: BISON INDIA LOGISTICS — SYSTEM CASH BOOK REGISTRY [IC]
+// FILE PATH: frontend/src/pages/Transactions.jsx
+// ============================================================================
 
-export default function Transactions() {
-  const { data: transactions = [] } = useQuery({
-    queryKey: ['transactions'],
-    queryFn: () => bisonAPI.transactions.list()
-  });
+import React from 'react';
 
+export default function Transactions({ transactions = [] }) {
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Transactions</h1>
-      <div className="bg-white rounded shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
+    <div className="space-y-6 animate-in fade-in duration-150">
+      
+      <div>
+        <h2 className="text-base font-black text-white uppercase tracking-tight">General Cash Book Registry</h2>
+        <p className="text-xs text-slate-500 mt-0.5 font-semibold">Audit tracking for liquid cash flows, fuel card disbursements, and clearings</p>
+      </div>
+
+      <div className="bg-slate-950/40 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <table className="w-full text-left text-xs whitespace-nowrap">
+          <thead className="bg-slate-900 text-[10px] font-bold text-slate-500 border-b border-slate-800 uppercase">
             <tr>
-              <th className="px-4 py-2 text-left">Date</th>
-              <th className="px-4 py-2 text-left">Type</th>
-              <th className="px-4 py-2 text-left">Party</th>
-              <th className="px-4 py-2 text-right">Amount</th>
-              <th className="px-4 py-2 text-left">Status</th>
+              <th className="px-6 py-4">Bank UTR / Ref Number</th>
+              <th className="px-6 py-4">Counterparty Account</th>
+              <th className="px-6 py-4">Classification</th>
+              <th className="px-6 py-4">Payment Instrument</th>
+              <th className="px-6 py-4 text-right">Transaction Volume</th>
             </tr>
           </thead>
-          <tbody>
-            {transactions.map(t => (
-              <tr key={t.id} className="border-t">
-                <td className="px-4 py-2">{t.transaction_date?.split('T')[0] || '-'}</td>
-                <td className="px-4 py-2">{t.transaction_type || '-'}</td>
-                <td className="px-4 py-2">{t.party_name || '-'}</td>
-                <td className="px-4 py-2 text-right font-semibold">₹{(t.amount || 0).toLocaleString()}</td>
-                <td className="px-4 py-2">{t.status || 'COMPLETED'}</td>
-              </tr>
-            ))}
-            {transactions.length === 0 && (
+          <tbody className="divide-y divide-slate-800/60 font-semibold text-slate-300 font-mono">
+            {transactions.length === 0 ? (
               <tr>
-                <td colSpan="5" className="px-4 py-8 text-center text-gray-500">No transactions found</td>
+                <td colSpan={5} className="px-6 py-6 text-center text-slate-600 font-bold uppercase text-[10px] font-sans">No accounting journal entries committed on current bus traces.</td>
               </tr>
+            ) : (
+              transactions.map((tx, idx) => (
+                <tr key={idx} className="hover:bg-slate-900/30 transition-colors">
+                  <td className="px-6 py-4 text-slate-400 text-xs font-black">{tx.reference_number}</td>
+                  <td className="px-6 py-4 text-white font-sans font-bold">{tx.party_name} <span className="text-slate-600 text-[10px] font-mono">({tx.party_type})</span></td>
+                  <td className="px-6 py-4 text-slate-400 font-sans">{tx.transaction_type}</td>
+                  <td className="px-6 py-4 text-slate-500 font-sans text-[11px]">{tx.payment_mode}</td>
+                  <td className={`px-6 py-4 text-right text-xs font-black ${
+                    tx.direction === 'CREDIT' ? 'text-emerald-400' : 'text-red-400'
+                  }`}>
+                    {tx.direction === 'CREDIT' ? '＋' : '─'} ₹{parseFloat(tx.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
       </div>
+
     </div>
   );
 }

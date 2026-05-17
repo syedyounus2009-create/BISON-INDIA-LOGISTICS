@@ -1,30 +1,38 @@
-import { Menu } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+// ============================================================================
+// SYSTEM IDENTIFIER: BISON INDIA LOGISTICS — MASTER SYSTEM ACCESS NAVIGATION HEAD [IC]
+// FILE PATH: frontend/src/components/layout/Header.jsx
+// ============================================================================
 
-export default function Header({ onMenuClick }) {
+import React from 'react';
+
+export default function Header({ currentDeviceMode }) {
+  const isMobile = currentDeviceMode === 'MOBILE';
+
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-white px-4 shadow-sm">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="lg:hidden"
-        onClick={onMenuClick}
-      >
-        <Menu className="h-5 w-5" />
-      </Button>
+    <header className="h-20 bg-slate-950 border-b border-slate-800 px-4 sm:px-8 flex items-center justify-between shrink-0 select-none z-30">
       
-      <div className="flex flex-1 items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold">BISON Smart Logistics</h1>
-          <p className="text-xs text-gray-500">India's Trusted Transport Network</p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-semibold">
-            A
+      {/* Search Input Query Socket */}
+      <div className={`${isMobile ? 'max-w-[180px]' : 'max-w-md'} w-full relative`}>
+        <input 
+          type="text" 
+          placeholder={isMobile ? "Query db..." : "Query manifests across RLS tenant mappings..."} 
+          className="w-full bg-slate-900/60 border border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-300 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
+        />
+      </div>
+
+      {/* Operator Account Verification Socket */}
+      <div className="flex items-center space-x-3 shrink-0">
+        {!isMobile && (
+          <div className="text-right">
+            <p className="text-xs font-black text-white uppercase tracking-tight">Eng. Syed Younus</p>
+            <p className="text-[9px] font-bold text-amber-500 uppercase tracking-widest leading-none mt-0.5">Lead Architect</p>
           </div>
+        )}
+        <div className="w-9 h-9 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-center font-black text-xs text-amber-500 shadow-sm font-mono select-none">
+          IST
         </div>
       </div>
+
     </header>
   );
 }

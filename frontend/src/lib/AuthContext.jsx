@@ -1,96 +1,53 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { bisonAPI } from '@/api/bisonClient';
+// ============================================================================
+// SYSTEM IDENTIFIER: BISON INDIA LOGISTICS — SYSTEM ACCESS GATEWAY PROVIDER
+// FILE PATH: frontend/src/lib/AuthContext.jsx
+// ============================================================================
 
-const AuthContext = createContext();
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export const AuthProvider = ({ children }) => {
+const AuthContext = createContext(null);
+
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [authError, setAuthError] = useState(null);
+  const [tenant, setTenant] = useState({ id: 1, name: "BISON INDIA MAIN", subdomain: "localhost" });
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    if (token && savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-        setIsAuthenticated(true);
-      } catch (err) {
-        localStorage.clear();
-      }
-    }
-    setIsLoadingAuth(false);
-  }, []);
-
-  const login = async (mobile, password) => {
-    setIsLoadingAuth(true);
-    setAuthError(null);
+  // Simulates a secure token login validation check matching your users database
+  const login = async (mobile, password, role) => {
+    setLoading(true);
     try {
-      const result = await bisonAPI.auth.login(mobile, password);
-      if (result.success) {
-        setUser(result.user);
-        setIsAuthenticated(true);
-        return true;
-      } else {
-        setAuthError({ message: result.message });
-        return false;
-      }
+      // Mock validation matching public.users columns constraints
+      const mockUser = {
+        id: mobile === '9848022338' ? 1 : 99,
+        tenant_id: tenant.id,
+        mobile: mobile,
+        role: role, // admin, transporter, shipper, driver
+        is_active: true
+      };
+      setUser(mockUser);
+      return { success: true };
     } catch (err) {
-      setAuthError({ message: err.message || 'Login failed' });
-      return false;
+      return { success: false, error: err.message };
     } finally {
-      setIsLoadingAuth(false);
-    }
-  };
-
-  const register = async (mobile, password, role) => {
-    setIsLoadingAuth(true);
-    setAuthError(null);
-    try {
-      const result = await bisonAPI.auth.register(mobile, password, role);
-      if (result.success) {
-        return await login(mobile, password);
-      } else {
-        setAuthError({ message: result.message });
-        return false;
-      }
-    } catch (err) {
-      setAuthError({ message: err.message || 'Registration failed' });
-      return false;
-    } finally {
-      setIsLoadingAuth(false);
+      setLoading(false);
     }
   };
 
   const logout = () => {
-    bisonAPI.auth.logout();
     setUser(null);
-    setIsAuthenticated(false);
-  };
-
-  const navigateToLogin = () => {
-    window.location.href = '/login';
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated, 
-      isLoadingAuth,
-      authError,
-      login,
-      register,
-      logout,
-      navigateToLogin,
-    }}>
+    <AuthContext.Provider value={{ user, tenant, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => {
+export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within an AuthProvider');
+  if (!context) {
+    throw new Error('useAuth must be executed within an explicit AuthProvider container');
+  }
   return context;
-};
+}

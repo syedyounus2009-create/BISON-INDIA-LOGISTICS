@@ -1,53 +1,111 @@
-import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { bisonAPI } from '@/api/bisonClient';
-import { X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
+// ============================================================================
+// SYSTEM IDENTIFIER: BISON INDIA LOGISTICS — GENERAL CASH FLOW REGISTRY [IC]
+// FILE PATH: frontend/src/components/finance/TransactionFormModal.jsx
+// ============================================================================
 
-export default function TransactionFormModal({ transaction, onClose }) {
-  const qc = useQueryClient();
-  const [form, setForm] = useState(transaction || {
-    amount: '', direction: 'Credit', transaction_type: 'Payment', payment_mode: 'NEFT',
-    party_name: '', party_type: 'Transporter', reference_number: '',
-    transaction_date: new Date().toISOString().split('T')[0], notes: ''
-  });
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+import React from 'react';
 
-  const { mutate, isPending } = useMutation({
-    mutationFn: (data) => transaction ? bisonAPI.transactions.update(transaction.id, data) : bisonAPI.transactions.create(data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['transactions'] }); toast.success(transaction ? 'Transaction updated!' : 'Transaction recorded!'); onClose(); }
-  });
+export default function TransactionFormModal({ isOpen, onClose, onSave }) {
+  if (!isOpen) return null;
 
-  const handleSubmit = (e) => { e.preventDefault(); mutate({ ...form, amount: parseFloat(form.amount) }); };
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    
+    const payload = {
+      amount: parseFloat(formData.get('amount')) || 0,
+      direction: formData.get('direction'), 
+      transaction_type: formData.get('transaction_type'),
+      party_name: formData.get('party_name'),
+      party_type: formData.get('party_type'),
+      payment_mode: formData.get('payment_mode'),
+      reference_number: formData.get('reference_number').toUpperCase(),
+      transaction_date: formData.get('transaction_date'),
+      notes: formData.get('notes') || '',
+      status: 'COMPLETED'
+    };
+
+    onSave(payload);
+    e.target.reset();
+    onClose();
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-lg">
-        <div className="flex items-center justify-between p-5 border-b">
-          <h2 className="text-xl font-bold">{transaction ? 'Edit Transaction' : 'Record Transaction'}</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X className="w-4 h-4" /></button>
-        </div>
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div><Label>Amount (₹)</Label><Input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} required /></div>
-            <div><Label>Direction</Label><Select value={form.direction} onValueChange={v => set('direction', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Credit">Credit (Incoming)</SelectItem><SelectItem value="Debit">Debit (Outgoing)</SelectItem></SelectContent></Select></div>
-            <div><Label>Transaction Type</Label><Select value={form.transaction_type} onValueChange={v => set('transaction_type', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Advance Payment">Advance Payment</SelectItem><SelectItem value="Balance Payment">Balance Payment</SelectItem><SelectItem value="Commission">Commission</SelectItem><SelectItem value="Refund">Refund</SelectItem><SelectItem value="Subscription">Subscription</SelectItem></SelectContent></Select></div>
-            <div><Label>Payment Mode</Label><Select value={form.payment_mode} onValueChange={v => set('payment_mode', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="NEFT">NEFT</SelectItem><SelectItem value="UPI">UPI</SelectItem><SelectItem value="Cash">Cash</SelectItem><SelectItem value="Cheque">Cheque</SelectItem></SelectContent></Select></div>
-            <div><Label>Party Name</Label><Input value={form.party_name} onChange={e => set('party_name', e.target.value)} /></div>
-            <div><Label>Party Type</Label><Select value={form.party_type} onValueChange={v => set('party_type', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Shipper">Shipper</SelectItem><SelectItem value="Transporter">Transporter</SelectItem><SelectItem value="Platform">Platform</SelectItem></SelectContent></Select></div>
-            <div><Label>Reference Number</Label><Input value={form.reference_number} onChange={e => set('reference_number', e.target.value)} /></div>
-            <div><Label>Transaction Date</Label><Input type="date" value={form.transaction_date} onChange={e => set('transaction_date', e.target.value)} /></div>
-            <div className="col-span-2"><Label>Notes</Label><Input value={form.notes} onChange={e => set('notes', e.target.value)} /></div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl subpixel-antialiased">
+        
+        <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/40">
+          <div>
+            <h3 className="text-xs font-black text-white uppercase tracking-tight">Record Cash Book Transaction</h3>
+            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Target: public.transactions</p>
           </div>
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={isPending} className="flex-1 bg-orange-500 text-white">{isPending ? 'Saving...' : transaction ? 'Update' : 'Record Transaction'}</Button>
+          <button onClick={onClose} className="text-slate-400 hover:text-white text-lg font-bold leading-none">&times;</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-4 space-y-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-1">Transaction Volume (INR)</label>
+              <input required name="amount" type="number" step="0.01" placeholder="e.g. 15000" className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500 font-mono font-bold" />
+            </div>
+            <div>
+              <label className="block text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-1">Flow Direction</label>
+              <select name="direction" className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500 font-bold">
+                <option value="CREDIT">CREDIT (Inward Revenue)</option>
+                <option value="DEBIT">DEBIT (Outward Expense)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-1">Classification Type</label>
+              <input required name="transaction_type" type="text" placeholder="e.g. Advance, Fuel" className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500 font-semibold" />
+            </div>
+            <div>
+              <label className="block text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-1">Payment Mode Instrument</label>
+              <select name="payment_mode" className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500 font-semibold">
+                <option value="UPI / NetBanking">UPI / NetBanking</option>
+                <option value="Razorpay Gateway">Razorpay Node</option>
+                <option value="Fuel Card">Fleet Fuel Card</option>
+                <option value="Cash">Cash Vault</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-1">Counterparty Name</label>
+              <input required name="party_name" type="text" placeholder="e.g. Karimnagar Depot" className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-1">Bank UTR / Reference</label>
+              <input required name="reference_number" type="text" placeholder="e.g. UTR99881122" className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500 font-mono font-bold" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-1">Settlement Date</label>
+              <input required name="transaction_date" type="date" className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-slate-400 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-1">Counterparty Type</label>
+              <input required name="party_type" type="text" placeholder="e.g. Vendor, Client" className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white focus:outline-none" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-1">Ledger Context Explanations</label>
+            <textarea name="notes" placeholder="Specify trip references or itemization splits..." className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white focus:outline-none h-14 resize-none font-medium" />
+          </div>
+
+          <div className="pt-2 flex items-center justify-end space-x-2">
+            <button type="button" onClick={onClose} className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-colors">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-[11px] font-black uppercase tracking-wider transition-colors shadow-md">Commit Entry</button>
           </div>
         </form>
+
       </div>
     </div>
   );

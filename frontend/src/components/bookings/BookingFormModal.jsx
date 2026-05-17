@@ -1,235 +1,97 @@
-import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { bisonAPI } from '@/api/bisonClient';
-import { X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
+// ============================================================================
+// SYSTEM IDENTIFIER: BISON INDIA LOGISTICS — OPERATIONS MANIFEST DISPATCHER
+// FILE PATH: frontend/src/components/bookings/BookingFormModal.jsx
+// ============================================================================
 
-export default function BookingFormModal({ onClose, booking }) {
-  const qc = useQueryClient();
-  
-  // 🔁 REPLACED: Load open loads from your backend (status 'PENDING')
-  const { data: allLoads = [] } = useQuery({ 
-    queryKey: ['loads'], 
-    queryFn: () => bisonAPI.loads.list() 
-  });
-  const openLoads = allLoads.filter(l => l.status === 'PENDING' || l.status === 'Open');
-  
-  // 🔁 REPLACED: Available trucks from your backend (status 'AVAILABLE')
-  const { data: allTrucks = [] } = useQuery({ 
-    queryKey: ['trucks'], 
-    queryFn: () => bisonAPI.trucks.list() 
-  });
-  const availableTrucks = allTrucks.filter(t => t.status === 'AVAILABLE');
-  
-  // 🔁 REPLACED: Available drivers from your backend (status 'AVAILABLE')
-  const { data: allDrivers = [] } = useQuery({ 
-    queryKey: ['drivers'], 
-    queryFn: () => bisonAPI.drivers.list() 
-  });
-  const availableDrivers = allDrivers.filter(d => d.status === 'AVAILABLE');
+import React from 'react';
 
-  const [form, setForm] = useState(booking || {
-    booking_number: `BB${Date.now().toString().slice(-8)}`,
-    load_id: '', shipper_name: '', transporter_name: '',
-    truck_id: '', truck_number: '', driver_id: '', driver_name: '', driver_phone: '',
-    from_city: '', from_state: '', to_city: '', to_state: '',
-    material_type: '', weight_tons: '', loading_date: '', expected_delivery_date: '',
-    agreed_price: '', advance_amount: '', commission_percent: 5,
-    lr_number: '', e_way_bill: ''
-  });
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+export default function BookingFormModal({ isOpen, onClose, loadOptions, truckOptions, driverOptions, onSave }) {
+  if (!isOpen) return null;
 
-  // Auto-fill load details when a load is selected
-  const handleLoadSelect = (loadId) => {
-    const load = openLoads.find(l => l.id === parseInt(loadId));
-    if (load) {
-      set('load_id', loadId);
-      setForm(f => ({
-        ...f, load_id: loadId,
-        from_city: load.pickup_location?.split(',')[0] || '',
-        to_city: load.drop_location?.split(',')[0] || '',
-        material_type: load.material_type,
-        weight_tons: load.weight_ton,
-        loading_date: load.loading_date || load.delivery_date,
-        agreed_price: load.offered_price || '',
-        shipper_name: load.shipper_name || f.shipper_name
-      }));
-    }
-  };
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    
+    const payload = {
+      trip_number: `TRIP-${Date.now().toString().slice(-6)}`,
+      load_id: parseInt(formData.get('load_id')),
+      truck_id: parseInt(formData.get('truck_id')),
+      driver_id: parseInt(formData.get('driver_id')),
+      start_location: formData.get('start_location'),
+      destination: formData.get('destination'),
+      start_date: formData.get('start_date'),
+      trip_status: 'CREATED',
+      payment_status: 'PENDING'
+    };
 
-  // Auto-fill truck details when a truck is selected
-  const handleTruckSelect = (truckId) => {
-    const truck = allTrucks.find(t => t.id === parseInt(truckId));
-    if (truck) {
-      setForm(f => ({ 
-        ...f, 
-        truck_id: truckId, 
-        truck_number: truck.truck_number, 
-        transporter_name: truck.owner_name || f.transporter_name 
-      }));
-    }
-  };
-
-  // Auto-fill driver details when a driver is selected
-  const handleDriverSelect = (driverId) => {
-    const driver = allDrivers.find(d => d.id === parseInt(driverId));
-    if (driver) {
-      setForm(f => ({ 
-        ...f, 
-        driver_id: driverId, 
-        driver_name: driver.name, 
-        driver_phone: driver.mobile 
-      }));
-    }
-  };
-
-  // 🔁 REPLACED: Create booking using your trips API
-  const { mutate, isPending } = useMutation({
-    mutationFn: (data) => {
-      const price = parseFloat(data.agreed_price) || 0;
-      const commissionAmt = price * (parseFloat(data.commission_percent) || 5) / 100;
-      const advanceAmt = parseFloat(data.advance_amount) || price * 0.2;
-      
-      // Create a trip record (booking) in your backend
-      return bisonAPI.trips.create({
-        trip_number: data.booking_number,
-        load_id: parseInt(data.load_id),
-        truck_id: parseInt(data.truck_id),
-        driver_id: parseInt(data.driver_id),
-        start_location: data.from_city,
-        destination: data.to_city,
-        start_date: data.loading_date,
-        end_date: data.expected_delivery_date || data.loading_date,
-        agreed_price: price,
-        advance_amount: advanceAmt,
-        commission_amount: commissionAmt,
-        status: 'CONFIRMED'
-      });
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['trips'] });
-      qc.invalidateQueries({ queryKey: ['bookings'] });
-      toast.success('Booking created successfully!');
-      onClose();
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || 'Failed to create booking');
-    }
-  });
-
-  const handleSubmit = (e) => { 
-    e.preventDefault(); 
-    mutate(form); 
+    onSave(payload);
+    e.target.reset();
+    onClose();
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="bg-card rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-5 border-b sticky top-0 bg-card z-10">
-          <h2 className="text-xl font-bold font-rajdhani">New Booking</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted"><X className="w-4 h-4" /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl subpixel-antialiased">
+        
+        <div className="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-950/40">
+          <div>
+            <h3 className="text-sm font-black text-white uppercase tracking-tight">Generate Active Corridor Trip Manifest</h3>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Target Table: public.trips</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white text-lg font-bold leading-none">&times;</button>
         </div>
+
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>Select Load</Label>
-              <Select value={form.load_id} onValueChange={handleLoadSelect}>
-                <SelectTrigger><SelectValue placeholder="Choose open load" /></SelectTrigger>
-                <SelectContent>
-                  {openLoads.map(l => (
-                    <SelectItem key={l.id} value={l.id.toString()}>
-                      {l.pickup_location?.split(',')[0]} → {l.drop_location?.split(',')[0]} ({l.material_type})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div>
+            <label className="block text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1.5">Select Active Load ID (public.loads)</label>
+            <select required name="load_id" className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500 font-semibold">
+              {loadOptions.map((load) => (
+                <option key={load.id} value={load.id}>{load.id} — {load.origin} to {load.destination} ({load.weight})</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1.5">Assign Vehicle (trucks)</label>
+              <select required name="truck_id" className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500 font-semibold">
+                {truckOptions.map((t) => (
+                  <option key={t.id} value={t.id}>{t.truck_number || t.id} ({t.truck_type})</option>
+                ))}
+              </select>
             </div>
-            <div className="space-y-1.5">
-              <Label>Booking Number</Label>
-              <Input value={form.booking_number} onChange={e => set('booking_number', e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>From City</Label>
-              <Input value={form.from_city} onChange={e => set('from_city', e.target.value)} placeholder="Loading city" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>To City</Label>
-              <Input value={form.to_city} onChange={e => set('to_city', e.target.value)} placeholder="Delivery city" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Shipper Name</Label>
-              <Input value={form.shipper_name} onChange={e => set('shipper_name', e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Select Truck</Label>
-              <Select value={form.truck_id} onValueChange={handleTruckSelect}>
-                <SelectTrigger><SelectValue placeholder="Choose truck" /></SelectTrigger>
-                <SelectContent>
-                  {availableTrucks.map(t => (
-                    <SelectItem key={t.id} value={t.id.toString()}>
-                      {t.truck_number} ({t.truck_type}) - {t.status}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Select Driver</Label>
-              <Select value={form.driver_id} onValueChange={handleDriverSelect}>
-                <SelectTrigger><SelectValue placeholder="Choose driver" /></SelectTrigger>
-                <SelectContent>
-                  {availableDrivers.map(d => (
-                    <SelectItem key={d.id} value={d.id.toString()}>
-                      {d.name} ({d.mobile}) - {d.status}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Material</Label>
-              <Input value={form.material_type} onChange={e => set('material_type', e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Weight (T)</Label>
-              <Input type="number" value={form.weight_tons} onChange={e => set('weight_tons', e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Loading Date</Label>
-              <Input type="date" value={form.loading_date} onChange={e => set('loading_date', e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Agreed Price (₹) *</Label>
-              <Input type="number" value={form.agreed_price} onChange={e => set('agreed_price', e.target.value)} required />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Advance Amount (₹)</Label>
-              <Input type="number" value={form.advance_amount} onChange={e => set('advance_amount', e.target.value)} placeholder="20% default" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Commission %</Label>
-              <Input type="number" value={form.commission_percent} onChange={e => set('commission_percent', e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>LR Number</Label>
-              <Input value={form.lr_number} onChange={e => set('lr_number', e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>E-Way Bill</Label>
-              <Input value={form.e_way_bill} onChange={e => set('e_way_bill', e.target.value)} />
+            <div>
+              <label className="block text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1.5">Assign Driver (drivers)</label>
+              <select required name="driver_id" className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500 font-semibold">
+                {driverOptions.map((d) => (
+                  <option key={d.id} value={d.id}>{d.driver || d.name}</option>
+                ))}
+              </select>
             </div>
           </div>
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={isPending} className="flex-1 bayson-orange-gradient text-white border-0">
-              {isPending ? 'Creating...' : 'Create Booking'}
-            </Button>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1.5">Start Hub Location</label>
+              <input required name="start_location" type="text" placeholder="e.g. Hyderabad, TS" className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500 font-semibold" />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1.5">Destination Hub</label>
+              <input required name="destination" type="text" placeholder="e.g. Mumbai, MH" className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500 font-semibold" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1.5">Trip Commencement Dispatch Date</label>
+            <input required name="start_date" type="date" className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-slate-400 focus:outline-none focus:border-amber-500 font-semibold" />
+          </div>
+
+          <div className="pt-2 flex items-center justify-end space-x-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors">Cancel</button>
+            <button type="submit" className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors shadow-md">Deploy Route Run</button>
           </div>
         </form>
+
       </div>
     </div>
   );
