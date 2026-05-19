@@ -67,7 +67,7 @@ export default function LandingPage({ onLoginSuccess }) {
           <div className="flex items-center gap-3">
             <img 
               src="/bison-logo.png" 
-              alt="Bayson Logo" 
+              alt="Bison Logo" 
               className="w-9 h-9 object-contain rounded-lg" 
             />
             <div>
