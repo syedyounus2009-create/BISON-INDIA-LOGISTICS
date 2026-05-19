@@ -71,7 +71,7 @@ export default function LandingPage({ onLoginSuccess }) {
               className="w-9 h-9 object-contain rounded-lg" 
             />
             <div>
-              <div className="font-sans font-black text-xl leading-none text-white tracking-tight">BAYSON</div>
+              <div className="font-sans font-black text-xl leading-none text-white tracking-tight">BISON</div>
               <div className="text-[9px] text-[#FF7A00] font-black tracking-widest mt-0.5">SMART LOGISTICS</div>
             </div>
           </div>
